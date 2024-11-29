@@ -1,1 +1,89 @@
-hgfhghjkliljhgf
+
+%B = how ofeten susecptible gets infected
+%y = how often infected recovers
+
+h = 1; %time step (day)
+
+%initial conditions for ODE
+S0 = 990;
+I0 = 10;
+R0 = 0;
+N = S0 + I0 + R0; %total population
+T = 100; %simulation time frame(days)
+
+
+%system of differential equations
+dSdt = @(B,y, S, I) (-B/N).*S.*I; %susceptible
+dIdt = @(B,y, S, I) (B/N).*S.*I-(y.*I); %infected
+dRdt = @(B,y, I) y.*I; %recovered
+
+
+%setting values to corresponding string array
+disease = {'Seasonal Influenza', 'COVID-19', 'Measles'};
+Dvalues = [0.3,0.1; 1, 0.1; 2, 0.2]; 
+
+%going through arrays to find Beta and gamma values correspoding to the
+%disease
+%overall loop to run through diseases
+for j = 1:length(disease)
+    B = Dvalues(j,1);  
+    y = Dvalues(j,2);
+    
+   
+%setting up arrays
+    Snew = zeros(1, T+1);
+    Inew = zeros(1, T +1);
+    Rnew = zeros(1, T+1);
+
+    %set initial conditions
+    Snew(1) = S0;
+    Inew(1) = I0;
+    Rnew(1) = R0;
+
+    S = S0;
+    I = I0;
+    R = R0;
+
+    for t = 1:T
+         %runge koutta 4 for S:
+        k1s = h * dSdt(B, y, S, I);
+        k2s = h * dSdt(B, y, S + k1s/2, I);
+        k3s = h * dSdt(B, y, S + k2s/2, I);
+        k4s = h * dSdt(B, y, S + k3s, I);
+
+        S = S + (1/6) * (k1s + 2 * k2s + 2 * k3s + k4s);
+
+        %runge-kutta 4 for I 
+        k1i = h * dIdt(B, y, S, I);
+        k2i = h * dIdt(B, y, S, I + k1i/2 );
+        k3i = h * dIdt(B, y, S, I + k2i/2);
+        k4i = h * dIdt(B, y, S, I + k3i);
+
+        I = I + (1/6) * (k1i + 2 * k2i + 2 * k3i + k4i);
+
+        %runge-kutta 4 for R
+        k1r = h * dRdt(B, y, I);
+        k2r = h * dRdt(B, y, I + k1r/2);
+        k3r = h * dRdt(B, y, I + k2r/2);
+        k4r = h * dRdt(B, y, I + k3r);
+
+        R = R + (1/6) * (k1r + 2 * k2r + 2 * k3r + k4r);
+
+        Snew(t+1) = S;
+        Inew(t+1) = I;
+        Rnew(t+1) = R;
+    end
+
+
+
+figure;
+
+plot(0:T, Snew, '--m', 0:T, Inew, '-r', 0:T, Rnew, '--b');
+legend('Suseptible', 'Infected','Recovered');
+title(disease{j});
+
+
+grid on;
+ 
+ 
+end
