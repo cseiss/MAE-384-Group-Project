@@ -1,1 +1,109 @@
+clear, clc
 
+% initializing variables
+A = 5;   % amplitude
+w = 2*pi*(365/365);   % angular frequency
+y = 0.1;   % value of gamma for equation
+h = 0.1;   % step size in days
+T = 30;   % time in days
+
+% initializing matrices
+S = zeros(1,T/h);
+I = zeros(1,T/h);
+R = zeros(1,T/h);
+
+% initial function values
+B(1) = 0.3;  % initial value of beta
+S(1) = 990;   % initial value of susceptible
+I(1) = 10;    % initial value of infected
+R(1) = 0;     % initial value of recovered
+N = S(1)+I(1)+R(1);
+
+% equations to be referenced
+B  = @(t) B(1)*(1+A*sin(w*t)); % periodic variation of transmission rate
+dS = @(B,S,I) -(B/N).*S.*I;   % susceptible
+dI = @(B,S,I,y) (B/N).*S.*I-y*I;   % infected
+dR = @(I) y*I;   % recovered
+
+for i = 1:(T/h)
+    % runge-kutta approx. for S
+    k1s = h*dS(B(i),S(i),I(i));
+    k2s = h*dS(B(i),S(i)+k1s*h/2,I(i));
+    k3s = h*dS(B(i),S(i)+k2s*h/2,I(i));
+    k4s = h*dS(B(i),S(i)+k2s*h,I(i));
+    S(i+1) = S(i)+(1/6)*(k1s+2*k2s+2*k3s+k4s);
+
+    % runge-kutta approx. for I
+    k1i = h*dI(B(i),S(i),I(i),y);
+    k2i = h*dI(B(i),S(i),I(i)+k1i*h/2,y);
+    k3i = h*dI(B(i),S(i),I(i)+k2i*h/2,y);
+    k4i = h*dI(B(i),S(i),I(i)+k3i*h,y);
+    I(i+1) = I(i)+(1/6)*(k1i+2*k2i+2*k3i+k4i);
+
+    % runge-kutta approx. for R
+    k1r = h*dR(I(i));
+    k2r = h*dR(I(i));
+    k3r = h*dR(I(i));
+    k4r = h*dR(I(i));
+    R(i+1) = R(i)+(1/6)*(k1r+2*k2r+2*k3r+k4r);
+end
+
+figure(1);
+plot(0:h:T,S,'--m',0:h:T,I,'-r',0:h:T,R,'--b');
+legend('Suseptible','Infected','Recovered');
+title('Fourier Analysis: Periodic Transmission (w = 365/365)');
+xlabel('Days');
+ylabel('Number of Cases')
+grid on;
+
+% fourier transforms
+fS = fft(S);
+fI =  fft(I);
+fR = fft(R);
+
+% variables for graphing figure(2)
+n = length(fI)-1;   % number of samples minus 1
+f = 1/T*(0:n/2-1);   % frequency
+Ihat2 = abs(fI);
+Ihat1 = Ihat2(1:n/2);
+
+figure(2)
+plot(f,Ihat1,'-r');
+title('Fourier Analysis: Infected Cases Spectrum');
+xlabel('Frequency');
+ylabel('Fourier Coefficients (abs)');
+grid on;
+
+% initializing new period for #6
+w = 2*pi*(100/365);   % rewrite angular frequency for #6
+B  = @(t) B(1)*(1+A*sin(w*t)); % new transmission rate for #6
+for j = 1:(T/h)
+    % runge-kutta approx. for S
+    k1s = h*dS(B(j),S(j),I(j));
+    k2s = h*dS(B(j),S(j)+k1s*h/2,I(j));
+    k3s = h*dS(B(j),S(j)+k2s*h/2,I(j));
+    k4s = h*dS(B(j),S(j)+k2s*h,I(j));
+    S(j+1) = S(j)+(1/6)*(k1s+2*k2s+2*k3s+k4s);
+
+    % runge-kutta approx. for I
+    k1i = h*dI(B(j),S(j),I(j),y);
+    k2i = h*dI(B(j),S(j),I(j)+k1i*h/2,y);
+    k3i = h*dI(B(j),S(j),I(j)+k2i*h/2,y);
+    k4i = h*dI(B(j),S(j),I(j)+k3i*h,y);
+    I(j+1) = I(j)+(1/6)*(k1i+2*k2i+2*k3i+k4i);
+
+    % runge-kutta approx. for R
+    k1r = h*dR(I(j));
+    k2r = h*dR(I(j));
+    k3r = h*dR(I(j));
+    k4r = h*dR(I(j));
+    R(j+1) = R(j)+(1/6)*(k1r+2*k2r+2*k3r+k4r);
+end
+
+figure(3);
+plot(0:h:T,S,'--m',0:h:T,I,'-r',0:h:T,R,'--b');
+legend('Suseptible','Infected','Recovered');
+title('Fourier Analysis: Periodic Transmission (w = 100/365)');
+xlabel('Days');
+ylabel('Number of Cases')
+grid on;
