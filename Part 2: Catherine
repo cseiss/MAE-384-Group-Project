@@ -1,1 +1,131 @@
+clear all;
+clc;
+
+% Parameters
+B = 0.3; % Transmission rate
+y = 0.1; % Recovery rate
+h_c = 2; % Coarse time step
+h_f = 1; % Fine time step
+T = 100; % Total simulation time (days)
+
+% Initial conditions
+S0 = 990;
+I0 = 10;
+R0 = 0;
+N = S0 + I0 + R0;
+
+% Time vectors
+t_c = 0:h_c:T;
+t_f = 0:h_f:T;
+
+% Anonymous functions for derivatives
+dSdt = @(B, N, S, I) (-B / N) * S * I; % Susceptible
+dIdt = @(B, y, N, S, I) (B / N) * S * I - y * I; % Infected
+dRdt = @(y, I) y * I; % Recovered
+
+% Initialize arrays for coarse RK4
+S_c = zeros(1, length(t_c));
+I_c = zeros(1, length(t_c));
+R_c = zeros(1, length(t_c));
+S_c(1) = S0; 
+I_c(1) = I0; 
+R_c(1) = R0;
+
+% RK4 for course time step
+for t = 1:length(t_c) - 1
+    S = S_c(t);
+    I = I_c(t);
+    R = R_c(t);
+
+    % RK4 for S
+    k1s = h_c * dSdt(B, N, S, I);
+    k2s = h_c * dSdt(B, N, S + k1s/2, I);
+    k3s = h_c * dSdt(B, N, S + k2s/2, I);
+    k4s = h_c * dSdt(B, N, S + k3s, I);
+    S_c(t + 1) = S + (1/6) * (k1s + 2*k2s + 2*k3s + k4s);
+
+    % RK4 for I
+    k1i = h_c * dIdt(B, y, N, S, I);
+    k2i = h_c * dIdt(B, y, N, S, I + k1i/2);
+    k3i = h_c * dIdt(B, y, N, S, I + k2i/2);
+    k4i = h_c * dIdt(B, y, N, S, I + k3i);
+    I_c(t + 1) = I + (1/6) * (k1i + 2*k2i + 2*k3i + k4i);
+
+    % RK4 for R
+    k1r = h_c * dRdt(y, I);
+    k2r = h_c * dRdt(y, I + k1r/2);
+    k3r = h_c * dRdt(y, I + k2r/2);
+    k4r = h_c * dRdt(y, I + k3r);
+    R_c(t + 1) = R + (1/6) * (k1r + 2*k2r + 2*k3r + k4r);
+end
+
+% RK4 for finer time step
+S_f = zeros(1, length(t_f));
+I_f = zeros(1, length(t_f));
+R_f = zeros(1, length(t_f));
+S_f(1) = S0; 
+I_f(1) = I0; 
+R_f(1) = R0;
+
+for t = 1:length(t_f) - 1
+    S = S_f(t);
+    I = I_f(t);
+    R = R_f(t);
+
+    % RK4 for S
+    k1s = h_f * dSdt(B, N, S, I);
+    k2s = h_f * dSdt(B, N, S + k1s/2, I);
+    k3s = h_f * dSdt(B, N, S + k2s/2, I);
+    k4s = h_f * dSdt(B, N, S + k3s, I);
+    S_f(t + 1) = S + (1/6) * (k1s + 2*k2s + 2*k3s + k4s);
+
+    % RK4 for I
+    k1i = h_f * dIdt(B, y, N, S, I);
+    k2i = h_f * dIdt(B, y, N, S, I + k1i/2);
+    k3i = h_f * dIdt(B, y, N, S, I + k2i/2);
+    k4i = h_f * dIdt(B, y, N, S, I + k3i);
+    I_f(t + 1) = I + (1/6) * (k1i + 2*k2i + 2*k3i + k4i);
+
+    % RK4 for R
+    k1r = h_f * dRdt(y, I);
+    k2r = h_f * dRdt(y, I + k1r/2);
+    k3r = h_f * dRdt(y, I + k2r/2);
+    k4r = h_f * dRdt(y, I + k3r);
+    R_f(t + 1) = R + (1/6) * (k1r + 2*k2r + 2*k3r + k4r);
+end
+
+% Interpolation Times
+t_odd = 1:2:T;
+
+% Linear Interpolation
+S_lin_interp = linear_interp(t_c, S_c, t_odd);
+I_lin_interp = linear_interp(t_c, I_c, t_odd);
+R_lin_interp = linear_interp(t_c, R_c, t_odd);
+
+% Quadratic Interpolation
+S_quad_interp = quadratic_interp(t_c, S_c, t_odd);
+I_quad_interp = quadratic_interp(t_c, I_c, t_odd);
+R_quad_interp = quadratic_interp(t_c, R_c, t_odd);
+
+% Exact Values
+S_exact = S_f(t_odd);
+I_exact = I_f(t_odd);
+R_exact = R_f(t_odd);
+
+% Error Calculation
+Error_linear_S = sqrt(sum((S_lin_interp - S_exact).^2) / length(t_odd));
+Error_linear_I = sqrt(sum((I_lin_interp - I_exact).^2) / length(t_odd));
+Error_linear_R = sqrt(sum((R_lin_interp - R_exact).^2) / length(t_odd));
+
+Error_quad_S = sqrt(sum((S_quad_interp - S_exact).^2) / length(t_odd));
+Error_quad_I = sqrt(sum((I_quad_interp - I_exact).^2) / length(t_odd));
+Error_quad_R = sqrt(sum((R_quad_interp - R_exact).^2) / length(t_odd));
+
+% Display Results
+errors_table = table({'S(t)'; 'I(t)'; 'R(t)'}, ...
+                     [Error_linear_S; Error_linear_I; Error_linear_R], ...
+                     [Error_quad_S; Error_quad_I; Error_quad_R], ...
+                     'VariableNames', {'SIR', 'Linear Error', 'Quadratic Error'});
+
+disp(errors_table);
 
