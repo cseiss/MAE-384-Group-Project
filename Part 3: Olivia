@@ -1,1 +1,71 @@
+%part 3 least squares
 
+% from part one collect true data
+Itrue = Inew(1:T);
+
+%for thirty days
+%set up
+t = 1:T; %time
+ln_I = log(Itrue); %ln(I true)
+
+%find each sum for least squares
+n = length(t); %number data points
+x_sum = sum(t); % sum of x (time pts)
+y_sum = sum(ln_I); %sum of y (ln infected)
+x2_sum = sum(t.^2); %sum of x^2
+xy_sum = sum(t.*ln_I);%sum of x * y
+
+% find slope m = k
+a1 = ((n * xy_sum) - (x_sum*y_sum)) / ((n * x2_sum) - (x_sum)^2);
+
+%find intercept b = ln(I(0))
+a0 = (1/n) * ((y_sum) - a1 * (x_sum));
+
+%initial infected population estimate
+Io_estimate = exp(a0);
+
+%estimate beta
+S0 = 990; %assume constant s
+ygamma = 0.1; %recover rate
+N = 1000; %total pop
+betaest = (a1 + ygamma) * N / S0; 
+
+
+%do it again but 10 days
+Itrue10 = Inew(1:10);
+
+%set up
+t10 = 1:10; %time
+ln_I10 = log(Itrue10); %ln(I true)
+
+%find each sum for least squares
+n10 = length(t10); %number data points
+x_sum10 = sum(t10); % sum of x (time pts)
+y_sum10 = sum(ln_I10); %sum of y (ln infected)
+x2_sum10 = sum(t10.^2); %sum of x^2
+xy_sum10 = sum(t10.*ln_I10);%sum of x * y
+
+% find slope m = k
+a1_10 = ((n10 * xy_sum10) - (x_sum10*y_sum10)) / ((n10 * x2_sum10) - (x_sum10)^2);
+
+%find intercept b = ln(I(0))
+a0_10 = (1/n10) * ((y_sum10) - a1_10 * (x_sum10));
+
+%initial infected population estimate
+Io_estimate10 = exp(a0_10);
+
+%estimate beta
+S0 = 990; %assume constant s
+ygamma = 0.1; %recover rate
+N = 1000; %total pop
+betaest_10 = (a1_10 + ygamma) * N / S0;
+
+
+% Display results
+fprintf('Estimated k for 30 days: %.4f\n', a1);
+fprintf('Estimated I(0) for 30 days: %.4f\n', a0);
+fprintf('Estimated beta for 30 days: %.4f\n', betaest);
+
+fprintf('Estimated k for 10 days: %.4f\n', a1_10);
+fprintf('Estimated I(0) for 10 days: %.4f\n', a0_10);
+fprintf('Estimated beta for 10 days: %.4f\n', betaest_10);
