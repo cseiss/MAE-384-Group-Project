@@ -1,5 +1,33 @@
 clear all;
 clc;
+%% Functions
+function interp_vals = linear_interp(t, y, t_odd)
+    interp_vals = zeros(size(t_odd));
+    for i = 1:length(t_odd)
+        t0 = find(t <= t_odd(i), 1, 'last');
+        t1 = t0 + 1;
+        interp_vals(i) = y(t0) + (y(t1) - y(t0)) / (t(t1) - t(t0)) * (t_odd(i) - t(t0));
+    end
+end
+
+function interp_vals = quadratic_interp(t, y, t_odd)
+    interp_vals = zeros(size(t_odd));
+    for i = 1:length(t_odd)
+        t0 = find(t <= t_odd(i), 1, 'last') - 1;
+        if t0 < 1, t0 = 1; end
+        t1 = t0 + 1;
+        t2 = t1 + 1;
+        
+        % Quadratic interpolation formula
+        L0 = ((t_odd(i) - t(t1)) * (t_odd(i) - t(t2))) / ((t(t0) - t(t1)) * (t(t0) - t(t2)));
+        L1 = ((t_odd(i) - t(t0)) * (t_odd(i) - t(t2))) / ((t(t1) - t(t0)) * (t(t1) - t(t2)));
+        L2 = ((t_odd(i) - t(t0)) * (t_odd(i) - t(t1))) / ((t(t2) - t(t0)) * (t(t2) - t(t1)));
+        
+        interp_vals(i) = L0 * y(t0) + L1 * y(t1) + L2 * y(t2);
+    end
+end
+
+%% Call
 
 % Parameters
 B = 0.3; % Transmission rate
