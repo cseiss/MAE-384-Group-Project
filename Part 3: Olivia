@@ -1,11 +1,11 @@
 %part 3 least squares
 
-% from part one collect true data
-Itrue = Inew(1:T);
+% from part one collect true data day 1 to day T
+Itrue = Inew(2:T);
 
 %for thirty days
 %set up
-t = 1:T; %time
+t = 2:T; %time: day 1 to day T
 ln_I = log(Itrue); %ln(I true)
 
 %find each sum for least squares
@@ -30,12 +30,11 @@ ygamma = 0.1; %recover rate
 N = 1000; %total pop
 betaest = (a1 + ygamma) * N / S0; 
 
-
 %do it again but 10 days
-Itrue10 = Inew(1:10);
+Itrue10 = Inew(2:10);
 
 %set up
-t10 = 1:10; %time
+t10 = 2:10; %time day 1 to day 10
 ln_I10 = log(Itrue10); %ln(I true)
 
 %find each sum for least squares
