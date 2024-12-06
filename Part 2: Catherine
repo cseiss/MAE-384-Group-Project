@@ -1,33 +1,10 @@
 clear all;
 clc;
-%% Functions
-function interp_vals = linear_interp(t, y, t_odd)
-    interp_vals = zeros(size(t_odd));
-    for i = 1:length(t_odd)
-        t0 = find(t <= t_odd(i), 1, 'last');
-        t1 = t0 + 1;
-        interp_vals(i) = y(t0) + (y(t1) - y(t0)) / (t(t1) - t(t0)) * (t_odd(i) - t(t0));
-    end
-end
+% NOTES:
+% For all variables "c" refers to coarse and "f" refers to fine.
 
-function interp_vals = quadratic_interp(t, y, t_odd)
-    interp_vals = zeros(size(t_odd));
-    for i = 1:length(t_odd)
-        t0 = find(t <= t_odd(i), 1, 'last') - 1;
-        if t0 < 1, t0 = 1; end
-        t1 = t0 + 1;
-        t2 = t1 + 1;
-        
-        % Quadratic interpolation formula
-        L0 = ((t_odd(i) - t(t1)) * (t_odd(i) - t(t2))) / ((t(t0) - t(t1)) * (t(t0) - t(t2)));
-        L1 = ((t_odd(i) - t(t0)) * (t_odd(i) - t(t2))) / ((t(t1) - t(t0)) * (t(t1) - t(t2)));
-        L2 = ((t_odd(i) - t(t0)) * (t_odd(i) - t(t1))) / ((t(t2) - t(t0)) * (t(t2) - t(t1)));
-        
-        interp_vals(i) = L0 * y(t0) + L1 * y(t1) + L2 * y(t2);
-    end
-end
-
-%% Call
+% The method use for interpolation was Lagrange for both linear and
+% quadratic.
 
 % Parameters
 B = 0.3; % Transmission rate
@@ -36,124 +13,135 @@ h_c = 2; % Coarse time step
 h_f = 1; % Fine time step
 T = 100; % Total simulation time (days)
 
-% Initial conditions
-S0 = 990;
-I0 = 10;
-R0 = 0;
+% Initial Conditions
+S0 = 990; % Susceptible
+I0 = 10; % Infected
+R0 = 0; % Recovered
 N = S0 + I0 + R0;
 
-% Time vectors
+% Solve the model for coarse and fine time steps
+[S_f, I_f, R_f] = solve_SIR(B, y, S0, I0, R0, h_f, T);
+[S_c, I_c, R_c] = solve_SIR(B, y, S0, I0, R0, h_c, T);
+
+% Odd days for interpolation
 t_c = 0:h_c:T;
 t_f = 0:h_f:T;
-
-% Anonymous functions for derivatives
-dSdt = @(B, N, S, I) (-B / N) * S * I; % Susceptible
-dIdt = @(B, y, N, S, I) (B / N) * S * I - y * I; % Infected
-dRdt = @(y, I) y * I; % Recovered
-
-% Initialize arrays for coarse RK4
-S_c = zeros(1, length(t_c));
-I_c = zeros(1, length(t_c));
-R_c = zeros(1, length(t_c));
-S_c(1) = S0; 
-I_c(1) = I0; 
-R_c(1) = R0;
-
-% RK4 for course time step
-for t = 1:length(t_c) - 1
-    S = S_c(t);
-    I = I_c(t);
-    R = R_c(t);
-
-    % RK4 for S
-    k1s = h_c * dSdt(B, N, S, I);
-    k2s = h_c * dSdt(B, N, S + k1s/2, I);
-    k3s = h_c * dSdt(B, N, S + k2s/2, I);
-    k4s = h_c * dSdt(B, N, S + k3s, I);
-    S_c(t + 1) = S + (1/6) * (k1s + 2*k2s + 2*k3s + k4s);
-
-    % RK4 for I
-    k1i = h_c * dIdt(B, y, N, S, I);
-    k2i = h_c * dIdt(B, y, N, S, I + k1i/2);
-    k3i = h_c * dIdt(B, y, N, S, I + k2i/2);
-    k4i = h_c * dIdt(B, y, N, S, I + k3i);
-    I_c(t + 1) = I + (1/6) * (k1i + 2*k2i + 2*k3i + k4i);
-
-    % RK4 for R
-    k1r = h_c * dRdt(y, I);
-    k2r = h_c * dRdt(y, I + k1r/2);
-    k3r = h_c * dRdt(y, I + k2r/2);
-    k4r = h_c * dRdt(y, I + k3r);
-    R_c(t + 1) = R + (1/6) * (k1r + 2*k2r + 2*k3r + k4r);
-end
-
-% RK4 for finer time step
-S_f = zeros(1, length(t_f));
-I_f = zeros(1, length(t_f));
-R_f = zeros(1, length(t_f));
-S_f(1) = S0; 
-I_f(1) = I0; 
-R_f(1) = R0;
-
-for t = 1:length(t_f) - 1
-    S = S_f(t);
-    I = I_f(t);
-    R = R_f(t);
-
-    % RK4 for S
-    k1s = h_f * dSdt(B, N, S, I);
-    k2s = h_f * dSdt(B, N, S + k1s/2, I);
-    k3s = h_f * dSdt(B, N, S + k2s/2, I);
-    k4s = h_f * dSdt(B, N, S + k3s, I);
-    S_f(t + 1) = S + (1/6) * (k1s + 2*k2s + 2*k3s + k4s);
-
-    % RK4 for I
-    k1i = h_f * dIdt(B, y, N, S, I);
-    k2i = h_f * dIdt(B, y, N, S, I + k1i/2);
-    k3i = h_f * dIdt(B, y, N, S, I + k2i/2);
-    k4i = h_f * dIdt(B, y, N, S, I + k3i);
-    I_f(t + 1) = I + (1/6) * (k1i + 2*k2i + 2*k3i + k4i);
-
-    % RK4 for R
-    k1r = h_f * dRdt(y, I);
-    k2r = h_f * dRdt(y, I + k1r/2);
-    k3r = h_f * dRdt(y, I + k2r/2);
-    k4r = h_f * dRdt(y, I + k3r);
-    R_f(t + 1) = R + (1/6) * (k1r + 2*k2r + 2*k3r + k4r);
-end
-
-% Interpolation Times
 t_odd = 1:2:T;
 
-% Linear Interpolation
-S_lin_interp = linear_interp(t_c, S_c, t_odd);
-I_lin_interp = linear_interp(t_c, I_c, t_odd);
-R_lin_interp = linear_interp(t_c, R_c, t_odd);
+% Linear and Quadratic Interpolation
+S_linear = arrayfun(@(s_odd) lagrange_linear(s_odd, t_c, S_c), t_odd); % s_odd is each element of t_odd
+I_linear = arrayfun(@(s_odd) lagrange_linear(s_odd, t_c, I_c), t_odd);
+R_linear = arrayfun(@(s_odd) lagrange_linear(s_odd, t_c, R_c), t_odd);
 
-% Quadratic Interpolation
-S_quad_interp = quadratic_interp(t_c, S_c, t_odd);
-I_quad_interp = quadratic_interp(t_c, I_c, t_odd);
-R_quad_interp = quadratic_interp(t_c, R_c, t_odd);
+S_quad = arrayfun(@(s_odd) lagrange_quadratic(s_odd, t_c, S_c), t_odd);
+I_quad = arrayfun(@(s_odd) lagrange_quadratic(s_odd, t_c, I_c), t_odd);
+R_quad = arrayfun(@(s_odd) lagrange_quadratic(s_odd, t_c, R_c), t_odd);
 
-% Exact Values
-S_exact = S_f(t_odd);
-I_exact = I_f(t_odd);
-R_exact = R_f(t_odd);
+% Calculate L2 Errors
+N_int = length(t_odd); % N_int is the number of interpolation points
+E_S_linear = sqrt(sum((S_linear - S_f(t_odd + 1)).^2) / N_int); 
+E_I_linear = sqrt(sum((I_linear - I_f(t_odd + 1)).^2) / N_int);
+E_R_linear = sqrt(sum((R_linear - R_f(t_odd + 1)).^2) / N_int);
 
-% Error Calculation
-Error_linear_S = sqrt(sum((S_lin_interp - S_exact).^2) / length(t_odd));
-Error_linear_I = sqrt(sum((I_lin_interp - I_exact).^2) / length(t_odd));
-Error_linear_R = sqrt(sum((R_lin_interp - R_exact).^2) / length(t_odd));
+E_S_quad = sqrt(sum((S_quad - S_f(t_odd + 1)).^2) / N_int);
+E_I_quad = sqrt(sum((I_quad - I_f(t_odd + 1)).^2) / N_int);
+E_R_quad = sqrt(sum((R_quad - R_f(t_odd + 1)).^2) / N_int);
 
-Error_quad_S = sqrt(sum((S_quad_interp - S_exact).^2) / length(t_odd));
-Error_quad_I = sqrt(sum((I_quad_interp - I_exact).^2) / length(t_odd));
-Error_quad_R = sqrt(sum((R_quad_interp - R_exact).^2) / length(t_odd));
+% Error Table
+error_table = [
+    E_S_linear, E_S_quad;
+    E_I_linear, E_I_quad;
+    E_R_linear, E_R_quad
+];
 
-% Display Results
-errors_table = table({'S(t)'; 'I(t)'; 'R(t)'}, ...
-                     [Error_linear_S; Error_linear_I; Error_linear_R], ...
-                     [Error_quad_S; Error_quad_I; Error_quad_R], ...
-                     'VariableNames', {'SIR', 'Linear Error', 'Quadratic Error'});
+disp('Error Table (3 x 2): Rows = [S(t), I(t), R(t)], Columns = [Linear, Quadratic]');
+disp(array2table(error_table, 'VariableNames', {'Linear', 'Quadratic'}, ...
+                 'RowNames', {'S(t)', 'I(t)', 'R(t)'}));
 
-disp(errors_table);
+
+% Functions
+
+% NOTES: 
+% The variables/format within the solve_SIR function is taken from Part I 
+
+
+% SIR function (Rk4)
+function [S, I, R] = solve_SIR(B, y, S0, I0, R0, h, T)
+    N = S0 + I0 + R0; % Total population
+    dSdt = @(S, I) (-B / N) * S * I;
+    dIdt = @(S, I) (B / N) * S * I - (y * I);
+    dRdt = @(I) y * I;
+
+    steps = T / h;
+    S = zeros(1, steps + 1);
+    I = zeros(1, steps + 1);
+    R = zeros(1, steps + 1);
+
+    S(1) = S0;
+    I(1) = I0;
+    R(1) = R0;
+
+    for t = 1:steps
+        k1s = h * dSdt(S(t), I(t));
+        k1i = h * dIdt(S(t), I(t));
+        k1r = h * dRdt(I(t));
+
+        k2s = h * dSdt(S(t) + k1s / 2, I(t) + k1i / 2);
+        k2i = h * dIdt(S(t) + k1s / 2, I(t) + k1i / 2);
+        k2r = h * dRdt(I(t) + k1i / 2);
+
+        k3s = h * dSdt(S(t) + k2s / 2, I(t) + k2i / 2);
+        k3i = h * dIdt(S(t) + k2s / 2, I(t) + k2i / 2);
+        k3r = h * dRdt(I(t) + k2i / 2);
+
+        k4s = h * dSdt(S(t) + k3s, I(t) + k3i);
+        k4i = h * dIdt(S(t) + k3s, I(t) + k3i);
+        k4r = h * dRdt(I(t) + k3i);
+
+        S(t + 1) = S(t) + (1 / 6) * (k1s + 2 * k2s + 2 * k3s + k4s);
+        I(t + 1) = I(t) + (1 / 6) * (k1i + 2 * k2i + 2 * k3i + k4i);
+        R(t + 1) = R(t) + (1 / 6) * (k1r + 2 * k2r + 2 * k3r + k4r);
+    end
+end
+
+% Linear Interpolation Function
+function y_interp = lagrange_linear(s_odd, t, y)
+    % Find the indices of the nearest two points
+    idx = find(t <= s_odd, 1, 'last');
+    if idx == length(t)
+        idx = idx - 1;
+    end
+    t0 = t(idx); 
+    t1 = t(idx + 1); 
+    y0 = y(idx);
+    y1 = y(idx + 1);
+    
+    % Linear interpolation formula
+    y_interp = y0 + (s_odd - t0) * (y1 - y0) / (t1 - t0);
+end
+
+% Quadratic Interpolation Function
+function y_interp = lagrange_quadratic(s_odd, t, y)
+    % Find the indices of the nearest three points
+    idx = find(t <= s_odd, 1, 'last');
+    if idx == length(t)
+        idx = idx - 1;
+    end
+    if idx == 1
+        idx = 2;
+    end
+    t0 = t(idx - 1);
+    t1 = t(idx);
+    t2 = t(idx + 1);
+    y0 = y(idx - 1);
+    y1 = y(idx);
+    y2 = y(idx + 1);
+
+    % Quadratic Lagrange interpolation formula
+    L0 = ((s_odd - t1)*(s_odd - t2)) / ((t0 - t1)*(t0 - t2));
+    L1 = ((s_odd - t0)*(s_odd - t2)) / ((t1 - t0)*(t1 - t2));
+    L2 = ((s_odd - t0)*(s_odd - t1)) / ((t2 - t0)*(t2 - t1));
+    
+    y_interp = L0*y0 + L1*y1 + L2*y2;
+end
 
