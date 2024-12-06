@@ -26,6 +26,10 @@ dI = @(B,S,I,y) (B/N).*S.*I-y*I;   % infected
 dR = @(I) y*I;   % recovered
 
 for i = 1:(T/h)
+    % calculating new value of beta
+    B(i) = dB(t);
+    t = t+h*i;
+
     % runge-kutta approx. for S
     k1s = h*dS(B(i),S(i),I(i));
     k2s = h*dS(B(i),S(i)+k1s*h/2,I(i));
@@ -78,6 +82,10 @@ grid on;
 w = 2*pi*(100/365);   % rewrite angular frequency for #6
 B  = @(t) B(1)*(1+A*sin(w*t)); % new transmission rate for #6
 for j = 1:(T/h)
+    % calculating new value of beta
+    B(i) = dB(t);
+    t = t+h*i;
+
     % runge-kutta approx. for S
     k1s = h*dS(B(j),S(j),I(j));
     k2s = h*dS(B(j),S(j)+k1s*h/2,I(j));
@@ -105,5 +113,5 @@ plot(0:h:T,S,'--m',0:h:T,I,'-r',0:h:T,R,'--b');
 legend('Suseptible','Infected','Recovered');
 title('Fourier Analysis: Periodic Transmission (w = 100/365)');
 xlabel('Days');
-ylabel('Number of Cases')
+ylabel('Number of Cases');
 grid on;
