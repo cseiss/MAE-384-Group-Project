@@ -83,8 +83,8 @@ w = 2*pi*(100/365);   % rewrite angular frequency for #6
 B  = @(t) B(1)*(1+A*sin(w*t)); % new transmission rate for #6
 for j = 1:(T/h)
     % calculating new value of beta
-    B(i) = dB(t);
-    t = t+h*i;
+    B(j) = dB(t);
+    t = t+h*j;
 
     % runge-kutta approx. for S
     k1s = h*dS(B(j),S(j),I(j));
